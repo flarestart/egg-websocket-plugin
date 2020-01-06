@@ -1,6 +1,6 @@
 # egg-websocket-plugin
 
-[![NPM version][npm-image]][npm-url]
+[![NPM version][npm-image]][npm-url]https://www.npmjs.com/package/egg-websocket-plugin
 [![build status][travis-image]][travis-url]
 [![Test coverage][codecov-image]][codecov-url]
 [![David deps][david-image]][david-url]
@@ -24,39 +24,116 @@
 Description here.
 -->
 
-## Install
+## 依赖说明
 
-```bash
-$ npm i egg-websocket-plugin --save
-```
+### 依赖的 egg 版本
 
-## Usage
+✅ egg 2.x 
+
+### 依赖的插件
+https://www.npmjs.com/package/ws
+
+^7.2.1
+
+## 使用方式
+
+### 1. 开启插件
 
 ```js
-// {app_root}/config/plugin.js
+// config/plugin.js
 exports.websocket = {
   enable: true,
   package: 'egg-websocket-plugin',
 };
 ```
 
-## Configuration
+### 2. 配置 WebSocket 路由
 
 ```js
-// {app_root}/config/config.default.js
-exports.websocket = {
-};
+// app/router.js
+app.ws.route('/ws', app.controller.home.hello);
 ```
 
-see [config/config.default.js](config/config.default.js) for more detail.
+### 3. 配置全局中间件
 
-## Example
+```js
+// app/router.js
 
-<!-- example here -->
+// 配置 WebSocket 全局中间件
+app.ws.use((ctx, next) => {
+  console.log('websocket open');
+  await next();
+  console.log('websocket close');
+});
+```
 
-## Questions & Suggestions
+### 4. 配置路由中间件
 
-Please open an issue [here](https://github.com/eggjs/egg/issues).
+**路由会依次用到 app.use, app.ws.use, 以及 app.ws.router 中配置的中间件**
+
+```js
+// app/router.js
+function middleware(ctx, next) {
+  console.log('open', ctx.starttime);
+  return next();
+}
+// 配置路由中间件
+app.ws.route('/ws', middleware, app.controller.home.hello);
+```
+
+### 5. 在控制中使用 websocket
+
+websocket 是一个 `ws`，可阅读 [ws](https://www.npmjs.com/package/ws) 插件的说明文档或 TypeScript 的定义
+
+```js
+// app/controller/home.js
+import { Controller } from 'egg';
+
+export default class HomeController extends Controller {
+	async hello() {
+    const { ctx, app } = this;
+    if (!ctx.websocket) {
+      throw new Error('this function can only be use in websocket router');
+    }
+    
+    console.log(`clients: ${app.ws.clients.size}`);
+
+    ctx.websocket
+      .on('message', msg => {
+        console.log('receive', msg);
+      })
+      .on('close', (code, reason) => {
+        console.log('websocket close', code, reason);
+      });
+  }
+}
+```
+
+
+
+## 使用场景
+
+- 使用 egg 开发标准 WebSocket 服务器
+- 微信小程序 WebSocket 服务器
+
+## 特性支持
+
+- [x] 兼容 egg 自身的 controller
+- [x] 兼容 egg 路由中间件
+- [x] 不需要像 socket.io 一样开启 `sticky` 模式
+- [ ] 多进程时的消息通讯
+
+## 详细配置
+
+请到 [config/config.default.js](config/config.default.js) 查看详细配置项说明。
+
+## 单元测试
+
+因 egg 本身单元测试对 WebSocket 支持有限，因此，暂不支持使用 egg-mock 进行单元测试
+
+## 提问交流
+
+请到 [issues](https://github.com/flarestart/egg-websocket-plugin/issues) 异步交流。
 
 ## License
 
