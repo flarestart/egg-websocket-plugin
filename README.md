@@ -1,6 +1,6 @@
 # egg-websocket-plugin
 
-[![NPM version][npm-image]][npm-url]https://www.npmjs.com/package/egg-websocket-plugin
+[![NPM version][npm-image]][npm-url]
 [![build status][travis-image]][travis-url]
 [![Test coverage][codecov-image]][codecov-url]
 [![David deps][david-image]][david-url]
@@ -28,7 +28,7 @@ Description here.
 
 ### 依赖的 egg 版本
 
-✅ egg 2.x 
+✅ egg 2.x
 
 ### 依赖的插件
 https://www.npmjs.com/package/ws
@@ -95,7 +95,7 @@ export default class HomeController extends Controller {
     if (!ctx.websocket) {
       throw new Error('this function can only be use in websocket router');
     }
-    
+
     console.log(`clients: ${app.ws.clients.size}`);
 
     ctx.websocket
