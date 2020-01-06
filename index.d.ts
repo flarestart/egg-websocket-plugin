@@ -12,5 +12,6 @@ declare module 'egg' {
 
   interface EggWs extends WebSocket.Server {
     route(path: string, ...middleware) : void;
+    use(middleware: (ctx : Context, next: () => Promise<void>) => Promise<void> ) : void;
   }
 }
