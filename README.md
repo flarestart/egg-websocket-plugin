@@ -30,12 +30,11 @@ Description here.
 
 ✅ egg 2.x
 
-### 依赖的插件
-https://www.npmjs.com/package/ws
-
-^7.2.1
-
 ## 使用方式
+
+```bash
+yarn add egg-websocket-plugin
+```
 
 ### 1. 开启插件
 
@@ -54,7 +53,7 @@ exports.websocket = {
 app.ws.route('/ws', app.controller.home.hello);
 ```
 
-### 3. 配置全局中间件
+### 3. 配置全局中间件【可选】
 
 ```js
 // app/router.js
@@ -63,11 +62,11 @@ app.ws.route('/ws', app.controller.home.hello);
 app.ws.use((ctx, next) => {
   console.log('websocket open');
   await next();
-  console.log('websocket close');
+  console.log('websocket closed');
 });
 ```
 
-### 4. 配置路由中间件
+### 4. 配置路由中间件【可选】
 
 **路由会依次用到 app.use, app.ws.use, 以及 app.ws.router 中配置的中间件**
 
@@ -83,14 +82,14 @@ app.ws.route('/ws', middleware, app.controller.home.hello);
 
 ### 5. 在控制中使用 websocket
 
-websocket 是一个 `ws`，可阅读 [ws](https://www.npmjs.com/package/ws) 插件的说明文档或 TypeScript 的定义
+websocket 是一个 `ws` 插件的实例，可阅读 [ws](https://www.npmjs.com/package/ws) 插件的说明文档或 TypeScript 的定义
 
 ```js
 // app/controller/home.js
 import { Controller } from 'egg';
 
 export default class HomeController extends Controller {
-	async hello() {
+  async hello() {
     const { ctx, app } = this;
     if (!ctx.websocket) {
       throw new Error('this function can only be use in websocket router');
@@ -99,14 +98,15 @@ export default class HomeController extends Controller {
     console.log(`clients: ${app.ws.clients.size}`);
 
     ctx.websocket
-      .on('message', msg => {
+      .on('message', (msg) => {
         console.log('receive', msg);
       })
       .on('close', (code, reason) => {
-        console.log('websocket close', code, reason);
+        console.log('websocket closed', code, reason);
       });
   }
 }
+
 ```
 
 
