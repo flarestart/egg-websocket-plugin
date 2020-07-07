@@ -10,8 +10,17 @@ declare module 'egg' {
     websocket?: WebSocket;
   }
 
+  export interface EggAppConfig {
+    websocket: {
+      useAppMiddlewares: boolean;
+    };
+  }
+
   interface EggWs extends WebSocket.Server {
-    route(path: string, ...middleware) : void;
-    use(middleware: (ctx : Context, next: () => Promise<void>) => Promise<void> ) : void;
+    route(path: string, ...middleware): void;
+    route(path: RegExp, ...middleware): void;
+    use(
+      middleware: (ctx: Context, next: () => Promise<void>) => Promise<void>,
+    ): void;
   }
 }
