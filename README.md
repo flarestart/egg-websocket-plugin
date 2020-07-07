@@ -78,9 +78,22 @@ function middleware(ctx, next) {
 }
 // 配置路由中间件
 app.ws.route('/ws', middleware, app.controller.home.hello);
+
+// 可使用路由参数，使用方式同 egg 自身路由
+app.ws.route('/foo/:id', app.controller.home.foo);
 ```
 
-### 5. 在控制中使用 websocket
+### 5. 禁用 app 全局中间件
+
+> 插件默认会使用 app.use(...) 注册的中间件，如果你不想使用它们，或者这些插件与 websocket 有冲突，你可以在 `config.default.js` 中禁用它们
+
+```js
+config.websocket = {
+  useAppMiddlewares: false,
+};
+```
+
+### 6. 在控制器中使用 websocket
 
 websocket 是一个 `ws` 插件的实例，可阅读 [ws](https://www.npmjs.com/package/ws) 插件的说明文档或 TypeScript 的定义
 
