@@ -1,20 +1,11 @@
 # egg-websocket-plugin
 
 [![NPM version][npm-image]][npm-url]
-[![build status][travis-image]][travis-url]
-[![Test coverage][codecov-image]][codecov-url]
-[![David deps][david-image]][david-url]
 [![Known Vulnerabilities][snyk-image]][snyk-url]
 [![npm download][download-image]][download-url]
 
 [npm-image]: https://img.shields.io/npm/v/egg-websocket-plugin.svg?style=flat-square
 [npm-url]: https://npmjs.org/package/egg-websocket-plugin
-[travis-image]: https://img.shields.io/travis/eggjs/egg-websocket-plugin.svg?style=flat-square
-[travis-url]: https://travis-ci.org/eggjs/egg-websocket-plugin
-[codecov-image]: https://img.shields.io/codecov/c/github/eggjs/egg-websocket-plugin.svg?style=flat-square
-[codecov-url]: https://codecov.io/github/eggjs/egg-websocket-plugin?branch=master
-[david-image]: https://img.shields.io/david/eggjs/egg-websocket-plugin.svg?style=flat-square
-[david-url]: https://david-dm.org/eggjs/egg-websocket-plugin
 [snyk-image]: https://snyk.io/test/npm/egg-websocket-plugin/badge.svg?style=flat-square
 [snyk-url]: https://snyk.io/test/npm/egg-websocket-plugin
 [download-image]: https://img.shields.io/npm/dm/egg-websocket-plugin.svg?style=flat-square
@@ -56,7 +47,7 @@ app.ws.route('/ws', app.controller.home.hello);
 app.ws.route('/foo/:id', app.controller.home.foo);
 ```
 
-### 3. 配置全局中间件【可选】
+### 3. 配置 WebSocket 全局中间件【可选】
 
 ```js
 // app/router.js
@@ -83,7 +74,7 @@ function middleware(ctx, next) {
 app.ws.route('/ws', middleware, app.controller.home.hello);
 ```
 
-### 5. 禁用 app 全局中间件
+### 5. 禁用 App 全局中间件
 
 > 插件默认会使用 app.use(...) 注册的中间件，如果你不想使用它们，或者这些插件与 websocket 有冲突，你可以在 `config.default.js` 中禁用它们
 
@@ -108,7 +99,7 @@ export default class HomeController extends Controller {
       throw new Error('this function can only be use in websocket router');
     }
 
-    console.log(`clients: ${app.ws.clients.size}`);
+    console.log('client connected');
 
     ctx.websocket
       .on('message', (msg) => {
