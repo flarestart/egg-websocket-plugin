@@ -1,8 +1,9 @@
 'use strict';
 
+import { EggWsServer } from "../app";
+
 const assert = require('assert');
 const mock = require('egg-mock');
-const ws = require('ws');
 
 describe('test/websocket-plugin.test.js', () => {
   let app;
@@ -17,11 +18,15 @@ describe('test/websocket-plugin.test.js', () => {
   afterEach(mock.restore);
 
   it('should have app ws property', () => {
-    assert(app.ws instanceof ws.Server);
+    assert(app.ws instanceof EggWsServer);
   });
 
   it('should have route function', () => {
     assert(typeof app.ws.route === 'function');
+  });
+
+  it('should have sendTo function', () => {
+    assert(typeof app.ws.sendTo === 'function');
   });
 
   it('should have 404 from http request ', () => {
