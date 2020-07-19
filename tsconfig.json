@@ -1,0 +1,20 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "target": "es6",
+    "module": "CommonJS",
+    "strict": true,
+    "pretty": true,
+    "sourceMap": false,
+    "skipDefaultLibCheck": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "declaration": true
+  },
+  "exclude": [
+    "test/*",
+    "node_modules*"
+  ]
+}

@@ -1,26 +1,20 @@
 import 'egg';
-import * as WebSocket from 'ws';
+import { RedisOptions } from 'ioredis';
+import { EggWsClient, EggWsServer } from './app';
 
 declare module 'egg' {
   export interface Application {
-    ws: EggWs;
+    ws: EggWsServer;
   }
 
   export interface Context {
-    websocket?: WebSocket;
+    websocket?: EggWsClient;
   }
 
   export interface EggAppConfig {
     websocket: {
       useAppMiddlewares: boolean;
+      redis: RedisOptions;
     };
-  }
-
-  interface EggWs extends WebSocket.Server {
-    route(path: string, ...middleware): void;
-    route(path: RegExp, ...middleware): void;
-    use(
-      middleware: (ctx: Context, next: () => Promise<void>) => Promise<void>,
-    ): void;
   }
 }
