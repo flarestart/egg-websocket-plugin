@@ -6,4 +6,7 @@ coverage/
 run/
 .DS_Store
 *.swp
-
+*.js
+*.d.ts
+yarn.lock
+yarn-error.log

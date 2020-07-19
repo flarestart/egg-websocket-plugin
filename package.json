@@ -1,7 +1,10 @@
 {
   "name": "egg-websocket-plugin",
-  "version": "0.1.1",
+  "version": "0.2.0-beta",
   "description": "Egg standard WebSocket plugin",
+  "egg": {
+    "typescript": true
+  },
   "eggPlugin": {
     "name": "websocket"
   },
@@ -10,6 +13,7 @@
     "eggPlugin",
     "egg-plugin"
   ],
+  "types": "./index.d.ts",
   "peerDependencies": {
     "egg": "^2.26.0"
   },
@@ -17,9 +21,11 @@
     "ws": "^7.2.1"
   },
   "optionalDependencies": {
-    "@types/ws": "^6.0.4"
+    "@types/ws": "^6.0.4",
+    "ioredis": "^4.0.0"
   },
   "devDependencies": {
+    "@types/mocha": "^8.0.0",
     "autod": "^3.0.1",
     "autod-egg": "^1.1.0",
     "egg": "^2.16.0",
@@ -27,23 +33,27 @@
     "egg-ci": "^1.11.0",
     "egg-mock": "^3.21.0",
     "eslint": "^5.13.0",
-    "eslint-config-egg": "^7.1.0"
+    "eslint-config-egg": "^7.1.0",
+    "typescript": "^3.9.7"
   },
   "engines": {
     "node": ">=8.0.0"
   },
   "scripts": {
-    "test": "npm run lint -- --fix && egg-bin pkgfiles && npm run test-local",
+    "test": "npm run lint -- --fix && npm run test-local",
     "test-local": "egg-bin test",
     "cov": "egg-bin cov",
     "lint": "eslint .",
-    "ci": "egg-bin pkgfiles --check && npm run lint && npm run cov",
-    "pkgfiles": "egg-bin pkgfiles",
-    "autod": "autod"
+    "ci": "npm run lint && npm run cov",
+    "autod": "autod",
+    "build": "tsc"
   },
   "files": [
-    "config",
     "app.js",
+    "app.d.ts",
+    "adapter/redis.js",
+    "adapter/redis.d.ts",
+    "config",
     "index.d.ts"
   ],
   "ci": {
