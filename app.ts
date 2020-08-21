@@ -4,9 +4,9 @@ import * as url from 'url';
 import * as WebSocket from 'ws';
 import * as Router from '@eggjs/router';
 import { Socket } from 'net';
-import { Application } from 'egg';
+import { Application, EggLogger } from 'egg';
+import { ServerResponse } from 'http';
 import { RedisPubSuber } from './adapter/redis';
-const http = require('http');
 
 export interface EggWsClient extends WebSocket {
   room: EggWebsocketRoom;
@@ -27,19 +27,26 @@ export type RoomHandler = (params: {
 
 let PubSubAdapter: PubSuber | undefined;
 
-function isFunction(v: any) {
+function getAdapter(logger?: EggLogger): PubSuber | undefined {
+  if (!PubSubAdapter) {
+    const err = new Error(
+      '[egg-websocket-plugin] no pub/sub adapter configure'
+    );
+    if (logger) {
+      logger.error(err);
+    } else {
+      console.error(err);
+    }
+  }
+  return PubSubAdapter;
+}
+
+function isFunction(v: any): v is Function {
   return typeof v === 'function';
 }
 
-function isString(v: any) {
+function isString(v: any): v is string {
   return typeof v === 'string';
-}
-
-function getAdapter(): PubSuber {
-  if (!PubSubAdapter) {
-    throw new Error('[egg-websocket-plugin] no pub/sub adapter configure');
-  }
-  return PubSubAdapter;
 }
 
 // 运行 controller 并等待退出
@@ -62,12 +69,14 @@ function waitWebSocket(controller) {
 
 export class EggWebsocketRoom {
   private _conn: WebSocket;
+  private _logger: EggLogger;
   private _joinedRooms: Set<string>;
   private _listening: boolean;
   private _roomHandlers: Map<string, RoomHandler> = new Map();
 
-  constructor(conn: WebSocket) {
+  constructor(conn: WebSocket, logger: EggLogger) {
     this._conn = conn;
+    this._logger = logger;
     this._joinedRooms = new Set();
     this._listening = false;
 
@@ -76,16 +85,23 @@ export class EggWebsocketRoom {
     });
   }
 
+  private get _adapter(): PubSuber | undefined {
+    return getAdapter(this._logger);
+  }
+
   sendTo(room: string, data: ArrayBufferLike | string) {
-    return getAdapter().publish(room, data);
+    return this._adapter?.publish(room, data);
   }
 
   sendJsonTo(room: string, data: any) {
-    return getAdapter().publish(room, JSON.stringify(data));
+    return this._adapter?.publish(room, JSON.stringify(data));
   }
 
   join(rooms: string | string[], fn?: RoomHandler) {
-    const adapter = getAdapter();
+    const adapter = this._adapter;
+    if (!adapter) {
+      return;
+    }
     const newRooms: string[] = [];
     let handler: RoomHandler;
     if (!fn) {
@@ -114,14 +130,19 @@ export class EggWebsocketRoom {
   }
 
   leave(rooms: string | string[]) {
-    const adapter = getAdapter();
-    const leaveRooms: string[] = [];
+    const adapter = getAdapter(this._logger);
+    if (!adapter) {
+      return;
+    }
     let roomsArray: string[];
-    if (!Array.isArray(rooms)) {
+    if (Array.isArray(rooms)) {
+      roomsArray = rooms;
+    } else if (isString(rooms)) {
       roomsArray = [rooms];
     } else {
-      roomsArray = rooms;
+      return;
     }
+    const leaveRooms: string[] = [];
     roomsArray.forEach(room => {
       if (this._joinedRooms.has(room)) {
         leaveRooms.push(room);
@@ -221,12 +242,9 @@ export class EggWsServer {
     this.server.handleUpgrade(request, socket, head, conn => {
       this.server.emit('connection', conn, request);
 
-      const ctx = this._app.createContext(
-        request,
-        new http.ServerResponse(request)
-      );
-      const expandConn: EggWsClient = (conn as unknown) as EggWsClient;
-      expandConn.room = new EggWebsocketRoom(conn);
+      const ctx = this._app.createContext(request, new ServerResponse(request));
+      const expandConn: EggWsClient = conn as EggWsClient;
+      expandConn.room = new EggWebsocketRoom(expandConn, this._app.logger);
       ctx.websocket = expandConn;
       const closeHandler = () => {
         // close websocket connection
@@ -242,6 +260,10 @@ export class EggWsServer {
         });
     });
   };
+
+  private get _adapter(): PubSuber | undefined {
+    return getAdapter(this._app.logger);
+  }
 
   use(middleware) {
     assert(
@@ -287,11 +309,11 @@ export class EggWsServer {
   }
 
   sendTo(room: string, data: ArrayBufferLike | string) {
-    return getAdapter().publish(room, data);
+    return this._adapter?.publish(room, data);
   }
 
   sendJsonTo(room: string, data: any) {
-    return getAdapter().publish(room, JSON.stringify(data));
+    return this._adapter?.publish(room, JSON.stringify(data));
   }
 
   private notFound(socket: Socket) {
