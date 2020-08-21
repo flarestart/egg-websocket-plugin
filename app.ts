@@ -228,13 +228,18 @@ export class EggWsServer {
       const expandConn: EggWsClient = (conn as unknown) as EggWsClient;
       expandConn.room = new EggWebsocketRoom(conn);
       ctx.websocket = expandConn;
-      controller(ctx).catch(e => {
+      const closeHandler = () => {
         // close websocket connection
-        if (!ctx.websocket.CLOSED) {
+        if (ctx.websocket.readyState !== ctx.websocket.CLOSED) {
           ctx.websocket.close();
         }
-        ctx.onerror(e);
-      });
+      };
+      controller(ctx)
+        .then(closeHandler)
+        .catch(e => {
+          closeHandler();
+          ctx.onerror(e);
+        });
     });
   };
 
