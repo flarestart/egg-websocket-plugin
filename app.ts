@@ -1,11 +1,11 @@
 import * as assert from 'assert';
+import { Application, EggLogger } from 'egg';
+import { IncomingMessage, ServerResponse } from 'http';
 import * as compose from 'koa-compose';
+import { Socket } from 'net';
 import * as url from 'url';
 import * as WebSocket from 'ws';
-import * as Router from '@eggjs/router';
-import { Socket } from 'net';
-import { Application, EggLogger } from 'egg';
-import { ServerResponse } from 'http';
+import { EggRouter as Router } from '@eggjs/router';
 import { RedisPubSuber } from './adapter/redis';
 
 export interface EggWsClient extends WebSocket {
@@ -49,19 +49,18 @@ function isString(v: any): v is string {
   return typeof v === 'string';
 }
 
-// 运行 controller 并等待退出
+// run controller until finish
 function waitWebSocket(controller) {
   return ctx => {
     return new Promise((resolve, reject) => {
-      ctx.websocket.on('close', resolve);
-      ctx.websocket.on('error', reject);
+      ctx.websocket.on('close', resolve).on('error', reject);
       try {
-        const ret = controller.call(ctx);
-        if (ret instanceof Promise) {
+        const ret = controller.call(ctx, ctx);
+        if (ret && isFunction(ret.catch)) {
           ret.catch(reject);
         }
-      } catch (e) {
-        reject(e);
+      } catch (err) {
+        reject(err);
       }
     });
   };
@@ -130,7 +129,10 @@ export class EggWebsocketRoom {
   }
 
   leave(rooms: string | string[]) {
-    const adapter = getAdapter(this._logger);
+    if (rooms === '' || (Array.isArray(rooms) && rooms.length <= 0)) {
+      return;
+    }
+    const adapter = this._adapter;
     if (!adapter) {
       return;
     }
@@ -184,11 +186,11 @@ export class EggWsServer {
       let obj = app.controller;
       actions.forEach(key => {
         obj = obj[key];
-        assert(
-          isFunction(obj),
-          `[egg-websocket-plugin]: controller '${controller}' not exists`
-        );
       });
+      assert(
+        isFunction(obj),
+        `[egg-websocket-plugin]: controller '${controller}' not exists`
+      );
       controller = obj;
     }
     // ensure controller is exists
@@ -201,7 +203,7 @@ export class EggWsServer {
 
   server: WebSocket.Server;
   private _app: Application;
-  private _router: Router = new Router();
+  private _router = new Router();
   private _middlewares: any[];
 
   constructor(app: Application) {
@@ -225,7 +227,12 @@ export class EggWsServer {
     });
   }
 
-  private _upgradeHandler = (request, socket, head) => {
+  private _upgradeHandler = (
+    request: IncomingMessage,
+    socket: Socket,
+    head: Buffer
+  ) => {
+    /* istanbul ignore next */
     if (!request.url) {
       return this.notFound(socket);
     }
@@ -244,7 +251,7 @@ export class EggWsServer {
 
       const ctx = this._app.createContext(request, new ServerResponse(request));
       const expandConn: EggWsClient = conn as EggWsClient;
-      expandConn.room = new EggWebsocketRoom(expandConn, this._app.logger);
+      expandConn.room = new EggWebsocketRoom(expandConn, ctx.logger);
       ctx.websocket = expandConn;
       const closeHandler = () => {
         // close websocket connection

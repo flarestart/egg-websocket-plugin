@@ -1,11 +1,20 @@
 # egg-websocket-plugin
 
 [![NPM version][npm-image]][npm-url]
+[![build status][travis-image]][travis-url]
+[![Test coverage][codecov-image]][codecov-url]
+[![David deps][david-image]][david-url]
 [![Known Vulnerabilities][snyk-image]][snyk-url]
 [![npm download][download-image]][download-url]
 
 [npm-image]: https://img.shields.io/npm/v/egg-websocket-plugin.svg?style=flat-square
 [npm-url]: https://npmjs.org/package/egg-websocket-plugin
+[travis-image]: https://img.shields.io/travis/flarestart/egg-websocket-plugin.svg?style=flat-square
+[travis-url]: https://travis-ci.org/flarestart/egg-websocket-plugin
+[codecov-image]: https://img.shields.io/codecov/c/github/flarestart/egg-websocket-plugin.svg?style=flat-square
+[codecov-url]: https://codecov.io/github/flarestart/egg-websocket-plugin?branch=master
+[david-image]: https://img.shields.io/david/flarestart/egg-websocket-plugin.svg?style=flat-square
+[david-url]: https://david-dm.org/flarestart/egg-websocket-plugin
 [snyk-image]: https://snyk.io/test/npm/egg-websocket-plugin/badge.svg?style=flat-square
 [snyk-url]: https://snyk.io/test/npm/egg-websocket-plugin
 [download-image]: https://img.shields.io/npm/dm/egg-websocket-plugin.svg?style=flat-square
@@ -287,12 +296,6 @@ ws.addEventListener('message', data => {
 
 - 使用 egg 开发标准 WebSocket 服务器
 - 微信小程序 WebSocket 服务器
-
-
-
-## 单元测试
-
-因 egg 本身单元测试对 WebSocket 支持有限，因此，暂不支持使用 egg-mock 进行单元测试
 
 
 
