@@ -1,6 +1,6 @@
 {
   "name": "egg-websocket-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1-beta.0",
   "description": "Egg standard WebSocket plugin",
   "egg": {
     "typescript": true
