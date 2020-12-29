@@ -12,7 +12,6 @@ export class RedisPubSuber implements PubSuber {
   listening = false;
 
   constructor(config: RedisOptions) {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const IORedis = require('ioredis');
     this.publisher = new IORedis(config);
     this.subscriber = new IORedis(config);
@@ -22,12 +21,12 @@ export class RedisPubSuber implements PubSuber {
     if (typeof message === 'string') {
       return this.publisher.publish(
         room,
-        `${RedisPubSuber.TYPE_STRING}${message}`,
+        `${RedisPubSuber.TYPE_STRING}${message}`
       );
     }
     return this.publisher.publish(
       room,
-      `${RedisPubSuber.TYPE_BINARY}${message.toString()}`,
+      `${RedisPubSuber.TYPE_BINARY}${message.toString()}`
     );
   }
 
@@ -78,7 +77,7 @@ export class RedisPubSuber implements PubSuber {
   joinRoom(...rooms: string[]) {
     const newRooms: string[] = [];
     rooms.forEach(room => {
-      const isNew = this._addRoomCounter(room);
+      const isNew = this._increaseRoomCounter(room);
       if (isNew) {
         newRooms.push(room);
       }
@@ -92,7 +91,7 @@ export class RedisPubSuber implements PubSuber {
   leaveRoom(...rooms: string[]) {
     const leaveRooms: any[] = [];
     rooms.forEach(room => {
-      const isDelete = this._deleteRoomCounter(room);
+      const isDelete = this._decreaseRoomCounter(room);
       if (isDelete) {
         leaveRooms.push(room);
       }
@@ -103,8 +102,8 @@ export class RedisPubSuber implements PubSuber {
     return this.subscriber.unsubscribe(...leaveRooms);
   }
 
-  // 房间计数器，计数器 <= 0 则取消订阅房间, 返回值 true: 新房间, false 房间已订阅
-  private _addRoomCounter(room: string): boolean {
+  // 房间计数器，计数器 <= 0 则取消订阅房间, 返回值 true: 新房间, false: 房间已订阅
+  private _increaseRoomCounter(room: string): boolean {
     const count = this.joinedRoomCounter.get(room);
     if (!count || count <= 0) {
       this.joinedRoomCounter.set(room, 1);
@@ -113,7 +112,7 @@ export class RedisPubSuber implements PubSuber {
     this.joinedRoomCounter.set(room, count + 1);
     return false;
   }
-  private _deleteRoomCounter(room: string): boolean {
+  private _decreaseRoomCounter(room: string): boolean {
     const count = this.joinedRoomCounter.get(room);
     if (!count || count <= 1) {
       this.joinedRoomCounter.delete(room);

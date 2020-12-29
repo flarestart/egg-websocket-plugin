@@ -1,5 +1,5 @@
 import * as assert from 'assert';
-import { Application, EggLogger } from 'egg';
+import { Application, Context, EggAppConfig } from 'egg';
 import { IncomingMessage, ServerResponse } from 'http';
 import * as compose from 'koa-compose';
 import { Socket } from 'net';
@@ -7,6 +7,12 @@ import * as url from 'url';
 import * as WebSocket from 'ws';
 import { EggRouter as Router } from '@eggjs/router';
 import { RedisPubSuber } from './adapter/redis';
+
+/**
+ * RFC6455 defined status code
+ * https://tools.ietf.org/html/rfc6455#section-7.4.1
+ */
+const WebSocketInternalError = 1011;
 
 export interface EggWsClient extends WebSocket {
   room: EggWebsocketRoom;
@@ -24,22 +30,6 @@ export type RoomHandler = (params: {
   room: string;
   message: ArrayBufferLike | string;
 }) => void;
-
-let PubSubAdapter: PubSuber | undefined;
-
-function getAdapter(logger?: EggLogger): PubSuber | undefined {
-  if (!PubSubAdapter) {
-    const err = new Error(
-      '[egg-websocket-plugin] no pub/sub adapter configure'
-    );
-    if (logger) {
-      logger.error(err);
-    } else {
-      console.error(err);
-    }
-  }
-  return PubSubAdapter;
-}
 
 function isFunction(v: any): v is Function {
   return typeof v === 'function';
@@ -67,37 +57,37 @@ function waitWebSocket(controller) {
 }
 
 export class EggWebsocketRoom {
-  private _conn: WebSocket;
-  private _logger: EggLogger;
+  private _server: EggWsServer;
+  private _ctx: Context;
   private _joinedRooms: Set<string>;
   private _listening: boolean;
   private _roomHandlers: Map<string, RoomHandler> = new Map();
 
-  constructor(conn: WebSocket, logger: EggLogger) {
-    this._conn = conn;
-    this._logger = logger;
+  constructor(wsServer: EggWsServer, ctx: any) {
+    this._server = wsServer;
+    this._ctx = ctx;
     this._joinedRooms = new Set();
     this._listening = false;
 
-    this._conn.on('close', () => {
+    this._ctx.websocket!.on('close', () => {
       this.leave(Array.from(this._joinedRooms));
     });
   }
 
-  private get _adapter(): PubSuber | undefined {
-    return getAdapter(this._logger);
+  private get adapter(): PubSuber | undefined {
+    return this._server.adapter;
   }
 
   sendTo(room: string, data: ArrayBufferLike | string) {
-    return this._adapter?.publish(room, data);
+    return this.adapter?.publish(room, data);
   }
 
   sendJsonTo(room: string, data: any) {
-    return this._adapter?.publish(room, JSON.stringify(data));
+    return this.adapter?.publish(room, JSON.stringify(data));
   }
 
   join(rooms: string | string[], fn?: RoomHandler) {
-    const adapter = this._adapter;
+    const adapter = this.adapter;
     if (!adapter) {
       return;
     }
@@ -132,7 +122,7 @@ export class EggWebsocketRoom {
     if (rooms === '' || (Array.isArray(rooms) && rooms.length <= 0)) {
       return;
     }
-    const adapter = this._adapter;
+    const adapter = this.adapter;
     if (!adapter) {
       return;
     }
@@ -142,6 +132,7 @@ export class EggWebsocketRoom {
     } else if (isString(rooms)) {
       roomsArray = [rooms];
     } else {
+      this._server.server.emit('error', new Error('invalid room name'));
       return;
     }
     const leaveRooms: string[] = [];
@@ -174,7 +165,7 @@ export class EggWebsocketRoom {
   };
 
   private _defaultHandler = ({ message }) => {
-    this._conn.send(message);
+    this._ctx.websocket!.send(message);
   };
 }
 
@@ -203,25 +194,30 @@ export class EggWsServer {
 
   server: WebSocket.Server;
   private _app: Application;
+  private _adapter?: PubSuber;
   private _router = new Router();
   private _middlewares: any[];
+  private _routerUsed = false;
+  public clients = new Set();
 
-  constructor(app: Application) {
+  constructor(config: EggAppConfig['websocket'], app: Application) {
     this.server = new WebSocket.Server({
       noServer: true,
     });
     this._app = app;
     this._middlewares = [];
     this.server.on('error', e => {
-      app.logger.error('[egg-websocket-plugin] error: ', e);
+      if (process.env['NODE_ENV'] === 'test') {
+        return;
+      }
+      // istanbul ignore next
+      app.logger.error('[egg-websocket-plugin] error: ', e.message);
     });
 
-    if (app.config.websocket && app.config.websocket.redis) {
-      PubSubAdapter = new RedisPubSuber(app.config.websocket.redis);
+    if (config && config.redis) {
+      this._adapter = new RedisPubSuber(config.redis);
     }
 
-    // add ws object to app
-    app.ws = (this as unknown) as any;
     app.on('server', server => {
       server.on('upgrade', this._upgradeHandler);
     });
@@ -232,7 +228,7 @@ export class EggWsServer {
     socket: Socket,
     head: Buffer
   ) => {
-    /* istanbul ignore next */
+    // istanbul ignore next
     if (!request.url) {
       return this.notFound(socket);
     }
@@ -251,25 +247,35 @@ export class EggWsServer {
 
       const ctx = this._app.createContext(request, new ServerResponse(request));
       const expandConn: EggWsClient = conn as EggWsClient;
-      expandConn.room = new EggWebsocketRoom(expandConn, ctx.logger);
       ctx.websocket = expandConn;
-      const closeHandler = () => {
+      expandConn.room = new EggWebsocketRoom(this, ctx);
+      this.clients.add(ctx);
+      const closeHandler = (err?: Error) => {
         // close websocket connection
+        this.clients.delete(ctx);
         if (ctx.websocket.readyState !== ctx.websocket.CLOSED) {
-          ctx.websocket.close();
+          ctx.websocket.close(err && WebSocketInternalError);
         }
       };
       controller(ctx)
-        .then(closeHandler)
-        .catch(e => {
+        .then(() => {
           closeHandler();
-          ctx.onerror(e);
+        })
+        .catch(e => {
+          closeHandler(e);
+          ctx.logger.error(e);
         });
     });
   };
 
-  private get _adapter(): PubSuber | undefined {
-    return getAdapter(this._app.logger);
+  public get adapter(): PubSuber | undefined {
+    if (!this._adapter) {
+      const err = new Error(
+        '[egg-websocket-plugin] redis pub/sub adapter configure not found'
+      );
+      this.server.emit('error', err);
+    }
+    return this._adapter;
   }
 
   use(middleware) {
@@ -278,7 +284,15 @@ export class EggWsServer {
       '[egg-websocket-plugin] middleware should be a function'
     );
     if (this._middlewares.includes(middleware)) {
+      this._app.logger.warn(
+        '[egg-websocket-plugin] same middleware has been used'
+      );
       return;
+    }
+    if (this._routerUsed) {
+      this._app.logger.warn(
+        '[egg-websocket-plugin] app.ws.use should used before all app.ws.route'
+      );
     }
     this._middlewares.push(middleware);
   }
@@ -295,6 +309,7 @@ export class EggWsServer {
     } else {
       controller = handler;
     }
+    this._routerUsed = true;
 
     // check if need to use app middlewares
     let appMiddlewares: any[] = [];
@@ -316,11 +331,11 @@ export class EggWsServer {
   }
 
   sendTo(room: string, data: ArrayBufferLike | string) {
-    return this._adapter?.publish(room, data);
+    return this.adapter?.publish(room, data);
   }
 
   sendJsonTo(room: string, data: any) {
-    return this._adapter?.publish(room, JSON.stringify(data));
+    return this.adapter?.publish(room, JSON.stringify(data));
   }
 
   private notFound(socket: Socket) {
@@ -329,5 +344,6 @@ export class EggWsServer {
 }
 
 export default (app: Application) => {
-  new EggWsServer(app);
+  // this is not a multi clients plugin, so it won't use app.addSingleton
+  app.ws = new EggWsServer(app.config.websocket, app);
 };
