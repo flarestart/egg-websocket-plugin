@@ -1,3 +1,10 @@
+## <small>1.0.1 (2020-12-29)</small>
+
+* refactor: 部分代码重构 ([6fca207](https://github.com/flarestart/egg-websocket-plugin/commit/6fca207))
+* test: 添加单元测试 ([758213d](https://github.com/flarestart/egg-websocket-plugin/commit/758213d))
+
+
+
 # [1.0.0](https://github.com/flarestart/egg-websocket-plugin/compare/v0.2.1...v1.0.0) (2020-08-22)
 
 

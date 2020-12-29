@@ -1,6 +1,6 @@
 {
   "name": "egg-websocket-plugin",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Egg standard WebSocket plugin",
   "egg": {
     "typescript": true
@@ -11,7 +11,9 @@
   "keywords": [
     "egg",
     "eggPlugin",
-    "egg-plugin"
+    "egg-plugin",
+    "websocket",
+    "ws"
   ],
   "types": "./index.d.ts",
   "peerDependencies": {
