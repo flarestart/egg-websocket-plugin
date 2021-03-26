@@ -68,12 +68,13 @@ app.ws.route('/foo/:id', app.controller.home.foo);
 ```
 
 ### 3. 配置 WebSocket 全局中间件【可选】
+**注意**：配置 WebSocket 全局中间件应当在所有 `app.ws.route` 注册路由之前进行，否则之前的路由不会应用到全局中间件，且插件会生成一条警告日志
 
 ```js
 // app/router.js
 
 // 配置 WebSocket 全局中间件
-app.ws.use((ctx, next) => {
+app.ws.use(async (ctx, next) => {
   console.log('websocket open');
   await next();
   console.log('websocket closed');
@@ -86,9 +87,9 @@ app.ws.use((ctx, next) => {
 
 ```js
 // app/router.js
-function middleware(ctx, next) {
+async function middleware(ctx, next) {
   console.log('open', ctx.starttime);
-  return next();
+  await next();
 }
 // 配置路由中间件
 app.ws.route('/ws', middleware, app.controller.home.hello);
