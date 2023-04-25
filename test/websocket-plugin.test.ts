@@ -100,7 +100,7 @@ describe('test/websocket-plugin.test.ts', () => {
   it('should throw error', () => {
     try {
       app.ws.route('/ws', null, () => {});
-    } catch (e) {
+    } catch (e: any) {
       assert(e.message === 'Middleware must be composed of functions!');
     }
   });
