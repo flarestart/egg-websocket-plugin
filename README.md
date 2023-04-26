@@ -28,7 +28,8 @@ Description here.
 
 ### 依赖的 egg 版本
 
-✅ egg 2.x
+✅ egg 2.x 安装 egg-websocket-plugin@1.0.1
+✅ egg 3.x 安装 egg-websocket-plugin@3.0.0+
 
 
 
